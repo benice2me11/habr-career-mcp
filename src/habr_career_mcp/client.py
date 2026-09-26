@@ -1,5 +1,6 @@
 import os
 import re
+import secrets
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Optional, Tuple
@@ -41,6 +42,19 @@ def encode_pairs(fields: Iterable[Tuple[str, str]]) -> str:
     return urlencode(list(fields), doseq=True, encoding="utf-8")
 
 
+def encode_multipart(fields: Iterable[Tuple[str, str]], boundary: Optional[str] = None) -> Tuple[bytes, str]:
+    boundary = boundary or ("----WebKitFormBoundary" + secrets.token_hex(12))
+    chunks = []
+    for name, value in fields:
+        chunks.extend([
+            f"--{boundary}\r\n".encode(),
+            f'Content-Disposition: form-data; name="{name}"\r\n\r\n'.encode(),
+            str(value).encode("utf-8"),
+            b"\r\n",
+        ])
+    chunks.append(f"--{boundary}--\r\n".encode())
+    return b"".join(chunks), f"multipart/form-data; boundary={boundary}"
+
 def _read_cookie_from_env() -> str:
     cookie = os.environ.get("HABR_COOKIE", "")
     if cookie.strip():
@@ -65,7 +79,7 @@ class HabrClient:
         self._csrf: Optional[str] = None
 
     def _request(self, path: str, method: str = "GET", body: Optional[bytes] = None, extra_headers=None) -> Response:
-        url = urljoin(self.base_url, path.lstrip("/"))
+        url = path if path.startswith(("http://", "https://")) else urljoin(self.base_url, path.lstrip("/"))
         headers = {
             "User-Agent": USER_AGENT,
             "Accept-Language": "ru,en;q=0.9",
@@ -97,20 +111,31 @@ class HabrClient:
             self._csrf = extract_csrf(self.get_text("/"))
         return self._csrf
 
-    def submit(self, action: str, method: str, fields) -> Response:
-        clean = [(k, v) for k, v in fields if k not in ("authenticity_token", "_method")]
-        body = encode_pairs(clean).encode("utf-8")
+    def submit(self, action: str, method: str, fields, *, multipart: bool = False, referer: Optional[str] = None) -> Response:
+        clean = [(k, v) for k, v in fields if k != "authenticity_token"]
+        wire_method = method.upper()
+        if wire_method not in ("GET", "POST"):
+            if not any(k == "_method" for k, _ in clean):
+                clean.insert(0, ("_method", wire_method.lower()))
+            wire_method = "POST"
+        if multipart:
+            body, content_type = encode_multipart(clean)
+            ajax_headers = {}
+        else:
+            body = encode_pairs(clean).encode("utf-8")
+            content_type = "application/x-www-form-urlencoded; charset=UTF-8"
+            ajax_headers = {"X-Requested-With": "XMLHttpRequest"}
 
         def send() -> Response:
             return self._request(
                 action,
-                method=method,
+                method=wire_method,
                 body=body,
                 extra_headers={
                     "X-CSRF-Token": self.csrf(),
-                    "X-Requested-With": "XMLHttpRequest",
-                    "Referer": urljoin(self.base_url, action.lstrip("/")),
-                    "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                    "Referer": urljoin(self.base_url, (referer or action).lstrip("/")),
+                    "Content-Type": content_type,
+                    **ajax_headers,
                 },
             )
 
