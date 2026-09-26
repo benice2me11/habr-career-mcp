@@ -50,7 +50,11 @@ def _read_cookie_from_env() -> str:
         for line in env_path.read_text(encoding="utf-8").splitlines():
             if line.startswith("HABR_COOKIE="):
                 return normalize_cookie(line.split("=", 1)[1].strip().strip("'\""))
-    return ""
+    try:
+        from .auth import cookie_header_from_state
+        return normalize_cookie(cookie_header_from_state())
+    except (OSError, ValueError, KeyError):
+        return ""
 
 
 class HabrClient:

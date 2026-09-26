@@ -27,6 +27,15 @@ For tests:
 
 ## Authentication
 
+Recommended: use the same browser-session flow as hh-mcp-server:
+
+    .venv/bin/python server.py --login
+
+A visible Chromium window opens. Log in only on career.habr.com; after protected profile access is verified, Playwright state is stored with private permissions under ~/.habr-career-mcp/profile/state.json. The HTTP client automatically reuses Career Habr cookies from that state.
+
+Manual HABR_COOKIE/.env authentication remains available as a fallback.
+
+
 Copy the example:
 
     cp .env.example .env

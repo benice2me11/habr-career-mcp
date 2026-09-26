@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import asyncio
 import json
 import re
 import sys
@@ -199,7 +200,7 @@ def check_live() -> int:
     who = app.whoami()
     print(json.dumps(who, ensure_ascii=False))
     if not who["authenticated"]:
-        print("live check: not authenticated; set HABR_COOKIE or create .env", file=sys.stderr)
+        print("live check: not authenticated; run server.py --login", file=sys.stderr)
         return 2
     token = app.client.csrf()
     print(f"csrf: OK ({len(token)} chars)")
@@ -209,9 +210,14 @@ def check_live() -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
+    parser.add_argument("--login", action="store_true", help="open Chromium and save a Career Habr browser session")
     parser.add_argument("--check", action="store_true", help="run an offline parser smoke test")
     parser.add_argument("--check-live", action="store_true", help="check Career Habr auth and CSRF without writing")
     args = parser.parse_args()
+    if args.login:
+        from habr_career_mcp.auth import run_login_flow
+        asyncio.run(run_login_flow())
+        return 0
     if args.check:
         return check_offline()
     if args.check_live:

@@ -2,8 +2,8 @@
 name = "habr-career-mcp"
 version = "0.1.0"
 description = "Safe MCP server for reading and editing Career Habr profile forms"
-requires-python = ">=3.9"
-dependencies = []
+requires-python = ">=3.10"
+dependencies = ["playwright==1.63.0"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
