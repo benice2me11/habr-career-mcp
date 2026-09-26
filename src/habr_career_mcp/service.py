@@ -82,13 +82,13 @@ class ProfileService:
             raise RuntimeError("stale preview: source form changed; create a new preview before applying")
 
         fields = merge_fields(current.fields, preview.changes)
-        response = self.client.submit(current.action, current.method, fields)
+        response = self.client.submit(current.action, current.method, fields, multipart=preview.path.startswith("/profile/personal/"), referer=preview.path)
         errors = _validation_errors(response.text)
         if errors:
             raise RuntimeError("Career Habr validation failed: " + "; ".join(errors))
-        if response.status >= 400:
-            raise RuntimeError(f"Career Habr write failed with HTTP {response.status}")
-
+        # Career Habr AJAX forms can save successfully and then produce a 404 in
+        # urllib's redirect handling. The authoritative success signal is the
+        # protected edit form read-back below, not the transport's final status.
         verified_form = parse_page(self.client.get_text(preview.path))
         after = grouped_values(verified_form.fields)
         mismatches = {}

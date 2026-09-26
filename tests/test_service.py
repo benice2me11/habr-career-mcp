@@ -23,7 +23,7 @@ class FakeClient:
     def get_text(self, path):
         return self.page
 
-    def submit(self, action, method, fields):
+    def submit(self, action, method, fields, **kwargs):
         self.submits.append((action, method, list(fields)))
         salary = dict(fields).get("user[salary]")
         if salary:
@@ -65,3 +65,18 @@ def test_preview_supports_repeated_field_replacement():
     service = ProfileService(client)
     preview = service.preview_update("/profile/specialization", {"user[tag_ids][]": ["1", "2"]})
     assert preview["changes"]["user[tag_ids][]"]["new"] == ["1", "2"]
+
+
+def test_apply_accepts_transport_404_when_readback_verifies_saved_value():
+    client = FakeClient()
+    original_submit = client.submit
+    def submit_with_404(action, method, fields, **kwargs):
+        response = original_submit(action, method, fields, **kwargs)
+        response.status = 404
+        return response
+    client.submit = submit_with_404
+    service = ProfileService(client)
+    preview = service.preview_update("/profile/specialization", {"user[salary]": "500000"})
+    result = service.apply_update(preview["preview_id"])
+    assert result["status"] == "saved"
+    assert result["verified"]["user[salary]"] == ["500000"]
