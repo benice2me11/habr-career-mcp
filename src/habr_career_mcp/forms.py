@@ -142,18 +142,22 @@ def parse_page(page: str) -> ParsedForm:
 
 
 def merge_fields(base: Sequence[Tuple[str, str]], changes: Dict[str, object]) -> FieldPairs:
-    override = {key: str(value) for key, value in changes.items()}
+    def values(value: object) -> List[str]:
+        if isinstance(value, (list, tuple)):
+            return [str(item) for item in value]
+        return [str(value)]
+
     merged: FieldPairs = []
     replaced = set()
     for key, value in base:
-        if key not in override:
+        if key not in changes:
             merged.append((key, value))
         elif key not in replaced:
-            merged.append((key, override[key]))
+            merged.extend((key, item) for item in values(changes[key]))
             replaced.add(key)
-    for key, value in override.items():
+    for key, value in changes.items():
         if key not in replaced:
-            merged.append((key, value))
+            merged.extend((key, item) for item in values(value))
     return merged
 
 
@@ -166,4 +170,11 @@ def scalar_values(fields: Sequence[Tuple[str, str]]) -> Dict[str, str]:
     result: Dict[str, str] = {}
     for key, value in fields:
         result[key] = value
+    return result
+
+
+def grouped_values(fields: Sequence[Tuple[str, str]]) -> Dict[str, List[str]]:
+    result: Dict[str, List[str]] = {}
+    for key, value in fields:
+        result.setdefault(key, []).append(value)
     return result
