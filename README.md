@@ -69,6 +69,7 @@ The server also reads HABR_COOKIE directly from the MCP process environment if y
 
 - habr_whoami: check the logged-in Career Habr account.
 - habr_get: read a Career Habr page.
+- habr_search_vacancies: read a full untruncated listings page, returning canonical vacancy IDs, title, employer, declared salary, publish timestamp, source page, next page, and explicit completeness signals. Call once per page; do not treat `pagination_unverified` as exhaustive search. This is read-only.
 - habr_form: inspect the actual editable form and current values.
 - habr_preview_update: prepare a diff; performs no write.
 - habr_apply_update: apply exactly one prior preview and verify the result.
