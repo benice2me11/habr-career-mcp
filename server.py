@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from habr_career_mcp.client import HabrClient
 from habr_career_mcp.service import ProfileService
+from habr_career_mcp.vacancy_search import search_vacancies
 
 
 def configure_utf8_output() -> None:
@@ -39,6 +40,23 @@ TOOLS = [
                 "limit": {"type": "integer", "default": 20000, "minimum": 1, "maximum": 100000},
             },
             "required": ["path"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "habr_search_vacancies",
+        "description": "Read-only structured vacancy discovery from the complete Habr response.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "default": ""},
+                "page": {"type": "integer", "minimum": 1, "maximum": 100, "default": 1},
+                "limit": {"type": "integer", "minimum": 1, "maximum": 100, "default": 50},
+                "previous_page_fingerprint": {
+                    "type": "string",
+                    "description": "Optional fingerprint of previous page; identical result fails closed.",
+                },
+            },
             "additionalProperties": False,
         },
     },
@@ -113,6 +131,14 @@ class App:
             if len(body) > limit:
                 body = body[:limit] + f"\n...[truncated, {len(response.text)} chars total]"
             return {"status": response.status, "url": response.url, "body": body}
+        if name == "habr_search_vacancies":
+            return search_vacancies(
+                self.client,
+                args.get("query", ""),
+                args.get("page", 1),
+                args.get("limit", 50),
+                args.get("previous_page_fingerprint"),
+            )
         if name == "habr_form":
             return self.service.form(args["path"])
         if name == "habr_preview_update":
