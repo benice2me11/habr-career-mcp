@@ -44,6 +44,10 @@ TOOLS = [
                 "query": {"type": "string", "default": ""},
                 "page": {"type": "integer", "minimum": 1, "maximum": 100, "default": 1},
                 "limit": {"type": "integer", "minimum": 1, "maximum": 100, "default": 50},
+                "previous_page_fingerprint": {
+                    "type": "string",
+                    "description": "Optional fingerprint of previous page; identical result fails closed.",
+                },
             },
             "additionalProperties": False,
         },
@@ -120,7 +124,13 @@ class App:
                 body = body[:limit] + f"\n...[truncated, {len(response.text)} chars total]"
             return {"status": response.status, "url": response.url, "body": body}
         if name == "habr_search_vacancies":
-            return search_vacancies(self.client, args.get("query", ""), args.get("page", 1), args.get("limit", 50))
+            return search_vacancies(
+                self.client,
+                args.get("query", ""),
+                args.get("page", 1),
+                args.get("limit", 50),
+                args.get("previous_page_fingerprint"),
+            )
         if name == "habr_form":
             return self.service.form(args["path"])
         if name == "habr_preview_update":
