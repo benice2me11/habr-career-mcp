@@ -1,0 +1,24 @@
+name: Habr Career MCP checks
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master, fix/structured-vacancy-discovery-20261014]
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -e '.[dev]'
+      - run: python -m pytest -q
+      - run: python server.py --check
+      - run: python -m compileall -q src server.py
