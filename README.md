@@ -101,6 +101,27 @@ Inspect the returned diff. Only then call:
 
 If the page changed between preview and apply, apply refuses to write and requires a new preview.
 
+
+### Habr read-only vacancy discovery
+
+\`habr_search_vacancies(query="Fullstack", page=1, limit=50)\` parses the **complete**
+authenticated HTTP response on the server before serializing a compact listing. 
+It does not create or send job applications, edit a profile or change existing
+\`habr_get\` behavior.
+
+Check \`next_page\` and \`search_complete\` after each call; follow the returned
+\`next_page\` rather than assuming a fixed page count. For the next page pass the
+previous result's \`page_fingerprint\` as \`previous_page_fingerprint\`.
+A repeated page, unexpected redirect or changed query raises an error rather than
+claiming complete search coverage.
+
+\`pagination_verified=false\`, \`search_complete=false\`, \`limit_truncated=true\`
+or a nonterminal \`stop_reason\` must be recorded as partial coverage in the caller.
+\`salary_raw=null\` means the employer did **not** disclose compensation; Habr's
+predicted salary is intentionally excluded. Persist source ID, canonical URL
+and publish timestamp, then separately verify the full vacancy description
+before screening. A result appearing in discovery is not a completed screening.
+
 ## Development checks
 
     . .venv/bin/activate
