@@ -14,6 +14,14 @@ from habr_career_mcp.client import HabrClient
 from habr_career_mcp.service import ProfileService
 
 
+def configure_utf8_output() -> None:
+    """Keep MCP JSON and login messages Unicode-safe on Windows pipes/consoles."""
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            reconfigure(encoding="utf-8")
+
+
 TOOLS = [
     {
         "name": "habr_whoami",
@@ -209,6 +217,7 @@ def check_live() -> int:
 
 
 def main() -> int:
+    configure_utf8_output()
     parser = argparse.ArgumentParser()
     parser.add_argument("--login", action="store_true", help="open Chromium and save a Career Habr browser session")
     parser.add_argument("--check", action="store_true", help="run an offline parser smoke test")

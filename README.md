@@ -19,17 +19,28 @@ There are no delete tools in the MVP.
 
 Python 3.9 or newer. Runtime uses only the standard library.
 
-For tests:
+For tests on macOS/Linux:
 
     python3 -m venv .venv
     . .venv/bin/activate
     python -m pip install pytest
+
+Windows PowerShell:
+
+    py -3.12 -m venv .venv
+    .\.venv\Scripts\python.exe -m pip install -e . pytest
+    .\.venv\Scripts\python.exe -m playwright install chromium
 
 ## Authentication
 
 Recommended: use the same browser-session flow as hh-mcp-server:
 
     .venv/bin/python server.py --login
+
+On Windows:
+
+    $env:HABR_STATE_FILE = "$HOME\work-search\machine-data\windows\local\habr\state.json"
+    .\.venv\Scripts\python.exe server.py --login
 
 A visible Chromium window opens. Log in only on career.habr.com; after protected profile access is verified, Playwright state is stored with private permissions under ~/.habr-career-mcp/profile/state.json. The HTTP client automatically reuses Career Habr cookies from that state.
 
@@ -47,6 +58,10 @@ The .env file is gitignored.
 Read-only verification:
 
     python3 server.py --check-live
+
+Windows:
+
+    .\.venv\Scripts\python.exe server.py --check-live
 
 Expected result contains authenticated=true and csrf=OK. This command never edits the profile.
 
