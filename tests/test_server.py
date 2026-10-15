@@ -23,6 +23,7 @@ def test_initialize_and_tool_listing():
     assert "habr_preview_update" in names
     assert "habr_apply_update" in names
     assert "habr_search_vacancies" in names
+    assert "habr_get_response_history" in names
 
 
 def test_tools_call_wraps_result():

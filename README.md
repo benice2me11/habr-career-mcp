@@ -85,6 +85,7 @@ The server also reads HABR_COOKIE directly from the MCP process environment if y
 - habr_whoami: check the logged-in Career Habr account.
 - habr_get: read a Career Habr page.
 - habr_search_vacancies: read a full untruncated listings page, returning canonical vacancy IDs, title, employer, declared salary, publish timestamp, source page, next page, and explicit completeness signals. Call once per page; do not treat `pagination_unverified` as exhaustive search. This is read-only.
+- habr_get_response_history: collect complete exact vacancy IDs from both active and deleted Habr response tabs for safe deduplication. A missing page, changed session or inconsistent count raises an error rather than returning partial history. This is read-only.
 - habr_form: inspect the actual editable form and current values.
 - habr_preview_update: prepare a diff; performs no write.
 - habr_apply_update: apply exactly one prior preview and verify the result.
@@ -136,6 +137,12 @@ or a nonterminal `stop_reason` must be recorded as partial coverage in the calle
 predicted salary is intentionally excluded. Persist source ID, canonical URL
 and publish timestamp, then separately verify the full vacancy description
 before screening. A result appearing in discovery is not a completed screening.
+
+For deduplication, call `habr_get_response_history(include_deleted=true)` before
+classifying an opportunity as never applied. Both active and deleted responses
+count as prior applications. Only accept the result when
+`history_complete=true`. Setting `include_deleted=false` intentionally
+returns an incomplete history, never a full deduplication baseline.
 
 ## Development checks
 

@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from habr_career_mcp.client import HabrClient
 from habr_career_mcp.service import ProfileService
+from habr_career_mcp.response_history import get_response_history
 from habr_career_mcp.vacancy_search import search_vacancies
 
 
@@ -56,6 +57,17 @@ TOOLS = [
                     "type": "string",
                     "description": "Optional fingerprint of previous page; identical result fails closed.",
                 },
+            },
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "habr_get_response_history",
+        "description": "Read-only complete active and deleted Habr application vacancy IDs; errors on incomplete history.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "include_deleted": {"type": "boolean", "default": True},
             },
             "additionalProperties": False,
         },
@@ -138,6 +150,10 @@ class App:
                 args.get("page", 1),
                 args.get("limit", 50),
                 args.get("previous_page_fingerprint"),
+            )
+        if name == "habr_get_response_history":
+            return get_response_history(
+                self.client, include_deleted=args.get("include_deleted", True)
             )
         if name == "habr_form":
             return self.service.form(args["path"])
