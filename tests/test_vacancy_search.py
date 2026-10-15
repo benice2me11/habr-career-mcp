@@ -83,5 +83,97 @@ class SearchTests(unittest.TestCase):
         self.assertEqual(r["vacancies"], [])
 
 
+
+    def test_footer_card_ignored_even_when_other_cards_present(self):
+        result = parse_listing(
+            '<div data-vacancy-list="">' + card(1) + '</div>' + card(999),
+            query="",
+        )
+        self.assertEqual([c["vacancy_id"] for c in result["vacancies"]], ["1"])
+
+    def test_duplicate_cards_are_deduplicated(self):
+        result = parse_listing(
+            '<div data-vacancy-list="">' + card(1) + card(1) + '</div>',
+            query="",
+        )
+        self.assertEqual(result["unique_page_count"], 1)
+
+    def test_unrelated_pagination_does_not_claim_exhaustion(self):
+        html = (
+            '<nav class="pagination"><a href="/blog?page=2">Next</a></nav>'
+            '<div data-vacancy-list="">' + card(1) + '</div>'
+        )
+        result = parse_listing(html, query="")
+        self.assertFalse(result["search_complete"])
+        self.assertFalse(result["pagination_verified"])
+
+    def test_unresolvable_next_control_cannot_claim_exhaustion(self):
+        html = (
+            '<div data-vacancy-list="">' + card(1)
+            + '<nav class="pagination"><a rel="next" '
+            'href="/vacancies?type=all&q=Go">Next</a></nav></div>'
+        )
+        result = parse_listing(html, query="Go")
+        self.assertFalse(result["search_complete"])
+        self.assertEqual(result["stop_reason"], "unresolved_next_page")
+
+    def test_final_page_with_previous_numeric_page_is_verified(self):
+        html = (
+            '<div data-vacancy-list="">' + card(1)
+            + '<nav class="pagination"><a '
+            'href="/vacancies?type=all&q=Go&page=1">1</a></nav></div>'
+        )
+        self.assertTrue(parse_listing(html, query="Go", page=2)["search_complete"])
+
+    def test_redirected_page_is_error(self):
+        class Changed:
+            def get(self, path):
+                return SimpleNamespace(
+                    status=200,
+                    url="https://career.habr.com/vacancies?q=Go&type=all&page=1",
+                    text='<div data-vacancy-list=""></div>',
+                )
+        with self.assertRaisesRegex(RuntimeError, "redirected/clamped"):
+            search_vacancies(Changed(), "Go", page=2)
+
+    def test_query_mismatch_is_error(self):
+        class Changed:
+            def get(self, path):
+                return SimpleNamespace(
+                    status=200,
+                    url="https://career.habr.com/vacancies?q=Python&type=all&page=1",
+                    text='<div data-vacancy-list=""></div>',
+                )
+        with self.assertRaisesRegex(RuntimeError, "changed query"):
+            search_vacancies(Changed(), "Go")
+
+    def test_identical_repeated_page_fails_closed(self):
+        html = '<div data-vacancy-list="">' + card(10) + '</div>'
+        first = parse_listing(html, query="Go", page=1)
+        class Same:
+            def get(self, path):
+                return SimpleNamespace(
+                    status=200,
+                    url="https://career.habr.com/vacancies?type=all&q=Go&page=2",
+                    text=html,
+                )
+        with self.assertRaisesRegex(RuntimeError, "repeated"):
+            search_vacancies(
+                Same(), "Go", page=2,
+                previous_page_fingerprint=first["page_fingerprint"],
+            )
+
+    def test_empty_query_url_is_supported(self):
+        html = '<div data-vacancy-list="">' + card(1) + '</div>'
+        class Home:
+            def get(self, path):
+                return SimpleNamespace(
+                    status=200,
+                    url="https://career.habr.com/vacancies?type=all&q=&page=1",
+                    text=html,
+                )
+        self.assertEqual(search_vacancies(Home(), "")["unique_page_count"], 1)
+
+
 if __name__ == "__main__":
     unittest.main()
